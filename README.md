@@ -2,6 +2,12 @@
 
 [vibe coding](https://x.com/karpathy/status/1886192184808149383?lang=en) an mcp client
 
+
+
+https://github.com/user-attachments/assets/f8b2abef-123c-4cb8-bc1c-32240d0b4b71
+
+
+
 **setup**
 
 ```bash
