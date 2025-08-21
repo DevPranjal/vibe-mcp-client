@@ -22,6 +22,10 @@ class AppGUI:
         self.deployment_var = tk.StringVar()
         self.server_script_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Initializing...")
+        
+        # Input field state
+        self.is_placeholder = True
+        self.placeholder_text = ""
 
         # --- Initialize variables from controller/config ---
         # The controller should load config and pass initial values here
@@ -210,35 +214,43 @@ class AppGUI:
                                    background=self.colors['accent'],
                                    foreground=self.colors['text_primary'],
                                    font=("Inter", 11, "normal"),
-                                   lmargin1=20, lmargin2=20, rmargin=60,
-                                   spacing1=8, spacing3=8)
+                                   lmargin1=40, lmargin2=40, rmargin=20,
+                                   spacing1=12, spacing3=12,
+                                   borderwidth=1,
+                                   relief='solid')
         
         self.chat_display.tag_config("assistant", 
                                    background=self.colors['bg_tertiary'],
                                    foreground=self.colors['text_primary'],
                                    font=("Inter", 11, "normal"),
-                                   lmargin1=60, lmargin2=60, rmargin=20,
-                                   spacing1=8, spacing3=8)
+                                   lmargin1=20, lmargin2=20, rmargin=40,
+                                   spacing1=12, spacing3=12,
+                                   borderwidth=1,
+                                   relief='solid')
         
         self.chat_display.tag_config("system", 
                                    foreground=self.colors['text_secondary'],
                                    font=("Inter", 10, "italic"),
                                    justify=tk.CENTER,
-                                   spacing1=4, spacing3=4)
+                                   spacing1=8, spacing3=8)
         
         self.chat_display.tag_config("tool_call", 
                                    background=self.colors['warning'],
                                    foreground=self.colors['bg_primary'],
-                                   font=("JetBrains Mono", 10),
-                                   lmargin1=40, lmargin2=40, rmargin=40,
-                                   spacing1=6, spacing3=6)
+                                   font=("Consolas", 10),
+                                   lmargin1=30, lmargin2=30, rmargin=30,
+                                   spacing1=10, spacing3=10,
+                                   borderwidth=1,
+                                   relief='solid')
         
         self.chat_display.tag_config("tool_response", 
                                    background=self.colors['success'],
                                    foreground=self.colors['bg_primary'],
-                                   font=("JetBrains Mono", 10),
-                                   lmargin1=40, lmargin2=40, rmargin=40,
-                                   spacing1=6, spacing3=6)
+                                   font=("Consolas", 10),
+                                   lmargin1=30, lmargin2=30, rmargin=30,
+                                   spacing1=10, spacing3=10,
+                                   borderwidth=1,
+                                   relief='solid')
 
 
         # --- Message Input Section ---
@@ -256,7 +268,7 @@ class AppGUI:
         input_frame.pack(fill=tk.X, pady=(0, 12))
         input_frame.columnconfigure(0, weight=1)
 
-        # Message input field
+        # Message input field with placeholder
         self.input_text = tk.Text(
             input_frame, 
             height=3, 
@@ -275,6 +287,13 @@ class AppGUI:
         self.input_text.grid(row=0, column=0, sticky="ew", padx=12, pady=12)
         self.input_text.bind("<Return>", self._on_enter_pressed)
         self.input_text.bind("<Shift-Return>", self._on_shift_enter_pressed)
+        
+        # Add placeholder text
+        self._add_placeholder_text()
+        
+        # Bind focus events for placeholder
+        self.input_text.bind("<FocusIn>", self._on_input_focus_in)
+        self.input_text.bind("<FocusOut>", self._on_input_focus_out)
 
         # Send button with modern styling
         send_btn = tk.Button(
@@ -315,7 +334,8 @@ class AppGUI:
 
     def _on_enter_pressed(self, event):
         """Handles Enter key press in the input field."""
-        self._send_input()
+        if not self.is_placeholder:
+            self._send_input()
         return "break" # Prevents the default newline insertion
 
     def _on_shift_enter_pressed(self, event):
@@ -324,11 +344,37 @@ class AppGUI:
         pass
 
 
+    def _add_placeholder_text(self):
+        """Adds placeholder text to the input field."""
+        self.placeholder_text = "Type your message here... (Press Enter to send, Shift+Enter for new line)"
+        self.input_text.insert("1.0", self.placeholder_text)
+        self.input_text.config(fg=self.colors['text_secondary'])
+        self.is_placeholder = True
+
+    def _on_input_focus_in(self, event):
+        """Removes placeholder text when input gains focus."""
+        if self.is_placeholder:
+            self.input_text.delete("1.0", tk.END)
+            self.input_text.config(fg=self.colors['text_primary'])
+            self.is_placeholder = False
+
+    def _on_input_focus_out(self, event):
+        """Adds placeholder text when input loses focus and is empty."""
+        if not self.input_text.get("1.0", tk.END).strip():
+            self._add_placeholder_text()
+
     def _send_input(self):
         """Gets text from input, clears it, and tells controller to send."""
+        if self.is_placeholder:
+            self.update_output("Please enter a message.", "system")
+            return
+            
         user_input = self.input_text.get("1.0", tk.END).strip()
         if user_input:
             self.input_text.delete("1.0", tk.END)
+            self.is_placeholder = False
+            # Add placeholder back
+            self._add_placeholder_text()
             # Call controller method to handle the sending logic
             self.controller.send_message_to_llm(user_input)
         else:
